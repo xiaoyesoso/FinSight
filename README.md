@@ -100,6 +100,14 @@ caution.**
 - **Traces**: Orchestrator → SubAgent → Tool → LLM spans → Jaeger.
 - **Log events**: structured prompts, API requests, tool results → Grafana.
 
+### Cost Attribution
+
+![Cost Attribution Formula](blog/img-cost-formula.png)
+
+- Per-request cost: `C = (Ni × Pi + No × Po + Nc × Pc) / 1,000,000`.
+- Multi-agent total cost is the sum of orchestrator + all SubAgent calls.
+- `enduser.id` / `tenant.id` resource attributes enable per-analyst and per-team rollups in Grafana.
+
 ### Frontend Workbench
 
 ![Frontend Homepage](blog/img-frontend-homepage.jpg)

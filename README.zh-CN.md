@@ -84,6 +84,14 @@
 - **Traces**：Agent → SubAgent → Tool → LLM 调用链 → Jaeger。
 - **Log Events**：结构化 prompt、API 请求、工具结果 → Grafana。
 
+### 成本归因
+
+![成本归因公式](blog/img-cost-formula.png)
+
+- 单次调用成本：`C = (Ni × Pi + No × Po + Nc × Pc) / 1,000,000`。
+- 多代理总成本为主代理与所有子代理各自 C 值之和。
+- `enduser.id` / `tenant.id` 资源属性支持在 Grafana 中按分析师和按团队汇总成本。
+
 ### 前端工作台
 
 ![前端首页](blog/img-frontend-homepage.jpg)
