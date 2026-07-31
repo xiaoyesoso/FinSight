@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1"/>
+    </linearGradient>
+    <marker id="arr3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#e2e8f0"/>
+    </marker>
+    <marker id="arr3r" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#ef4444"/>
+    </marker>
+    <marker id="arr3g" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#22c55e"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="450" fill="url(#bg3)"/>
+
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" fill="#f1f5f9" font-size="18" font-weight="bold">Hook 治理, 审计, 生命周期</text>
+  <text x="450" y="55" text-anchor="middle" fill="#64748b" font-size="12">SDK Hooks 在无人值守场景下的三道防线</text>
+
+  <!-- Timeline line -->
+  <line x1="80" y1="230" x2="820" y2="230" stroke="#334155" stroke-width="2"/>
+
+  <!-- Step 1: PreToolUse -->
+  <circle cx="150" cy="230" r="12" fill="#ef4444" opacity="0.8"/>
+  <text x="150" y="234" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold">1</text>
+  <rect x="80" y="130" width="160" height="80" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5" opacity="0.9"/>
+  <text x="160" y="152" text-anchor="middle" fill="#fca5a5" font-size="12" font-weight="bold">PreToolUse</text>
+  <text x="160" y="170" text-anchor="middle" fill="#94a3b8" font-size="9">权限守卫</text>
+  <text x="95" y="187" fill="#cbd5e1" font-size="8">Read/Grep/Glob -> auto allow</text>
+  <text x="95" y="200" fill="#cbd5e1" font-size="8">Write/Bash(danger) -> deny</text>
+
+  <!-- Arrow down from PreToolUse -->
+  <line x1="150" y1="242" x2="150" y2="270" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arr3r)"/>
+
+  <!-- Step 2: Tool Execution -->
+  <circle cx="380" cy="230" r="12" fill="#3b82f6" opacity="0.8"/>
+  <text x="380" y="234" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold">2</text>
+  <rect x="300" y="270" width="160" height="70" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" opacity="0.9"/>
+  <text x="380" y="293" text-anchor="middle" fill="#93c5fd" font-size="12" font-weight="bold">Tool Execution</text>
+  <text x="380" y="310" text-anchor="middle" fill="#94a3b8" font-size="9">CLI 子进程执行</text>
+  <text x="380" y="325" text-anchor="middle" fill="#64748b" font-size="8">Read / Bash / Agent / MCP ...</text>
+
+  <!-- Arrow from step1 to step2 on timeline -->
+  <line x1="165" y1="230" x2="365" y2="230" stroke="#475569" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Step 3: PostToolUse -->
+  <circle cx="610" cy="230" r="12" fill="#22c55e" opacity="0.8"/>
+  <text x="610" y="234" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold">3</text>
+  <rect x="530" y="130" width="160" height="80" rx="8" fill="#1e293b" stroke="#22c55e" stroke-width="1.5" opacity="0.9"/>
+  <text x="610" y="152" text-anchor="middle" fill="#86efac" font-size="12" font-weight="bold">PostToolUse</text>
+  <text x="610" y="170" text-anchor="middle" fill="#94a3b8" font-size="9">审计日志</text>
+  <text x="545" y="187" fill="#cbd5e1" font-size="8">-> audit_log.jsonl</text>
+  <text x="545" y="200" fill="#cbd5e1" font-size="8">session_id + agent_id + I/O</text>
+
+  <!-- Arrow up to PostToolUse -->
+  <line x1="610" y1="218" x2="610" y2="215" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arr3g)"/>
+
+  <!-- Arrow from step2 to step3 on timeline -->
+  <line x1="395" y1="230" x2="595" y2="230" stroke="#475569" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Step 4: Subagent lifecycle -->
+  <circle cx="790" cy="230" r="12" fill="#8b5cf6" opacity="0.8"/>
+  <text x="790" y="234" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold">4</text>
+  <rect x="710" y="270" width="160" height="70" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.5" opacity="0.9"/>
+  <text x="790" y="293" text-anchor="middle" fill="#c4b5fd" font-size="12" font-weight="bold">SubagentStart/Stop</text>
+  <text x="790" y="310" text-anchor="middle" fill="#94a3b8" font-size="9">生命周期追踪</text>
+  <text x="790" y="325" text-anchor="middle" fill="#64748b" font-size="8">agent_id + transcript_path</text>
+
+  <!-- Arrow from step3 to step4 -->
+  <line x1="625" y1="230" x2="775" y2="230" stroke="#475569" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Audit log file representation -->
+  <rect x="80" y="380" width="740" height="55" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="100" y="400" fill="#64748b" font-size="9" font-family="monospace">// backend/data/audit_log.jsonl</text>
+  <text x="100" y="415" fill="#475569" font-size="8" font-family="monospace">{"ts":"2026-07-30T...","session_id":"abc...","agent":"financial-analyzer","tool":"Read","input":{"file_path":"report.pdf"},"output_summary":"..."}</text>
+  <text x="100" y="427" fill="#334155" font-size="8" font-family="monospace">{"ts":"2026-07-30T...","session_id":"abc...","agent":"risk_alert","tool":"mcp__websearch__bochasearch","input":{"query":"退市预警"},"output_summary":"..."}</text>
+
+  <!-- permissionDecision note -->
+  <rect x="80" y="370" width="220" height="0" fill="none"/>
+  <text x="200" y="373" text-anchor="middle" fill="#ef4444" font-size="8" font-weight="600">⚠ permissionDecision 必须嵌套在 hookSpecificOutput 中</text>
+</svg>

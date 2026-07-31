@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0c1828;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#1a2540;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="freshG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:0.15"/>
+    </linearGradient>
+    <linearGradient id="resumeG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#047857;stop-opacity:0.15"/>
+    </linearGradient>
+    <linearGradient id="forkG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#b45309;stop-opacity:0.15"/>
+    </linearGradient>
+    <marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="480" fill="url(#bg2)"/>
+
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" fill="#f1f5f9" font-size="18" font-weight="bold">三种会话模式的 SDK 映射</text>
+  <text x="450" y="55" text-anchor="middle" fill="#64748b" font-size="12">ClaudeAgentOptions 在 fresh / resume / fork 下的行为差异</text>
+
+  <!-- Three columns -->
+  <!-- Column 1: Fresh -->
+  <rect x="30" y="75" width="270" height="380" rx="10" fill="url(#freshG)" stroke="#3b82f6" stroke-width="1.5"/>
+  <rect x="30" y="75" width="270" height="35" rx="10" fill="#3b82f6" opacity="0.3"/>
+  <text x="165" y="98" text-anchor="middle" fill="#93c5fd" font-size="14" font-weight="bold">🆕 Fresh（全新会话）</text>
+
+  <text x="50" y="130" fill="#cbd5e1" font-size="11" font-weight="600">SDK Options:</text>
+  <rect x="45" y="138" width="240" height="55" rx="4" fill="#0f172a" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="55" y="155" fill="#7dd3fc" font-size="9" font-family="monospace">ClaudeAgentOptions(</text>
+  <text x="65" y="168" fill="#93c5fd" font-size="9" font-family="monospace">  session_id=&lt;uuid&gt;,</text>
+  <text x="65" y="181" fill="#93c5fd" font-size="9" font-family="monospace">  agents=agents_config, ...)</text>
+
+  <text x="50" y="215" fill="#cbd5e1" font-size="11" font-weight="600">行为:</text>
+  <text x="55" y="232" fill="#94a3b8" font-size="10">• 生成新 session_id</text>
+  <text x="55" y="247" fill="#94a3b8" font-size="10">• 注册 3 个 SubAgents + MCP</text>
+  <text x="55" y="262" fill="#94a3b8" font-size="10">• 注入 Hooks + OTel env</text>
+  <text x="55" y="277" fill="#94a3b8" font-size="10">• SDK 持久化到磁盘</text>
+
+  <text x="50" y="305" fill="#cbd5e1" font-size="11" font-weight="600">HTTP:</text>
+  <rect x="45" y="312" width="240" height="30" rx="4" fill="#0f172a" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="55" y="332" fill="#7dd3fc" font-size="9" font-family="monospace">POST /api/research</text>
+
+  <text x="50" y="365" fill="#60a5fa" font-size="10" font-weight="600">→ 返回新 session_id</text>
+  <text x="50" y="385" fill="#64748b" font-size="9">客户端保存，供后续 resume/fork</text>
+
+  <!-- Arrow Fresh -> Resume -->
+  <text x="310" y="265" fill="#475569" font-size="20">→</text>
+
+  <!-- Column 2: Resume -->
+  <rect x="330" y="75" width="270" height="380" rx="10" fill="url(#resumeG)" stroke="#10b981" stroke-width="1.5"/>
+  <rect x="330" y="75" width="270" height="35" rx="10" fill="#10b981" opacity="0.3"/>
+  <text x="465" y="98" text-anchor="middle" fill="#6ee7b7" font-size="14" font-weight="bold">🔄 Resume（继续追问）</text>
+
+  <text x="350" y="130" fill="#cbd5e1" font-size="11" font-weight="600">SDK Options:</text>
+  <rect x="345" y="138" width="240" height="55" rx="4" fill="#0f172a" stroke="#064e3b" stroke-width="1"/>
+  <text x="355" y="155" fill="#7dd3fc" font-size="9" font-family="monospace">ClaudeAgentOptions(</text>
+  <text x="365" y="168" fill="#6ee7b7" font-size="9" font-family="monospace">  resume=session_id,</text>
+  <text x="365" y="181" fill="#6ee7b7" font-size="9" font-family="monospace">  agents=agents_config, ...)</text>
+
+  <text x="350" y="215" fill="#cbd5e1" font-size="11" font-weight="600">行为:</text>
+  <text x="355" y="232" fill="#94a3b8" font-size="10">• 同一个 session_id</text>
+  <text x="355" y="247" fill="#94a3b8" font-size="10">• 恢复完整历史上下文</text>
+  <text x="355" y="262" fill="#94a3b8" font-size="10">• PDF / Skill 缓存复用</text>
+  <text x="355" y="277" fill="#94a3b8" font-size="10">• 追加新 prompt 到历史</text>
+
+  <text x="350" y="305" fill="#cbd5e1" font-size="11" font-weight="600">HTTP:</text>
+  <rect x="345" y="312" width="240" height="30" rx="4" fill="#0f172a" stroke="#064e3b" stroke-width="1"/>
+  <text x="355" y="332" fill="#7dd3fc" font-size="9" font-family="monospace">{mode: "resume", session_id}</text>
+
+  <text x="350" y="365" fill="#34d399" font-size="10" font-weight="600">→ 原地继续，session 不变</text>
+  <text x="350" y="385" fill="#64748b" font-size="9">「补充最新一周行业利空」</text>
+
+  <!-- Arrow Resume -> Fork -->
+  <text x="610" y="265" fill="#475569" font-size="20">→</text>
+
+  <!-- Column 3: Fork -->
+  <rect x="630" y="75" width="270" height="380" rx="10" fill="url(#forkG)" stroke="#f59e0b" stroke-width="1.5"/>
+  <rect x="630" y="75" width="270" height="35" rx="10" fill="#f59e0b" opacity="0.3"/>
+  <text x="765" y="98" text-anchor="middle" fill="#fcd34d" font-size="14" font-weight="bold">🌿 Fork（分叉探索）</text>
+
+  <text x="650" y="130" fill="#cbd5e1" font-size="11" font-weight="600">SDK Options:</text>
+  <rect x="645" y="138" width="240" height="55" rx="4" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="655" y="155" fill="#7dd3fc" font-size="9" font-family="monospace">ClaudeAgentOptions(</text>
+  <text x="665" y="168" fill="#fcd34d" font-size="9" font-family="monospace">  resume=session_id,</text>
+  <text x="665" y="181" fill="#fcd34d" font-size="9" font-family="monospace">  fork_session=True, ...)</text>
+
+  <text x="650" y="215" fill="#cbd5e1" font-size="11" font-weight="600">行为:</text>
+  <text x="655" y="232" fill="#94a3b8" font-size="10">• 克隆出新 session_id</text>
+  <text x="655" y="247" fill="#94a3b8" font-size="10">• 原会话完全不受影响</text>
+  <text x="655" y="262" fill="#94a3b8" font-size="10">• max_turns=5 限制深度</text>
+  <text x="655" y="277" fill="#94a3b8" font-size="10">• 适合 what-if 平行探索</text>
+
+  <text x="650" y="305" fill="#cbd5e1" font-size="11" font-weight="600">HTTP:</text>
+  <rect x="645" y="312" width="240" height="30" rx="4" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="655" y="332" fill="#7dd3fc" font-size="9" font-family="monospace">{mode: "fork", session_id, max_turns}</text>
+
+  <text x="650" y="365" fill="#fbbf24" font-size="10" font-weight="600">→ 新分支，原会话保持</text>
+  <text x="650" y="385" fill="#64748b" font-size="9">「用不同折现率重做 DCF」</text>
+
+  <!-- Bottom note -->
+  <rect x="30" y="430" width="840" height="35" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="450" y="452" text-anchor="middle" fill="#475569" font-size="10">final_result SSE 事件携带 session_id（fork 额外携带 parent_session_id）-> 前端 SessionBar 提供 resume / fork 操作</text>
+</svg>
