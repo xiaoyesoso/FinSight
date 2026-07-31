@@ -49,6 +49,8 @@ caution.**
 
 ## Architecture
 
+![Architecture Overview](blog/img-architecture.png)
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Browser (analyst)                     │
@@ -73,6 +75,34 @@ caution.**
 │   └──────────────────────────────────────────────────┘   │
 └──────────────────────────────────────────────────────────┘
 ```
+
+### Session Modes
+
+![Session Modes](blog/img-sessions.png)
+
+- **Fresh**: a new `session_id` is generated; agents, MCP servers, hooks, and telemetry env are registered.
+- **Resume**: continue in the same session with full context rehydration.
+- **Fork**: clone the session into an isolated branch with a new `session_id`; the original stays untouched.
+
+### Governance Hooks
+
+![Governance Hooks](blog/img-hooks.png)
+
+- **PreToolUse**: permission guardrail that auto-allows read-only tools and denies dangerous writes/commands.
+- **PostToolUse**: appends a JSONL audit record per tool call.
+- **SubagentStart / SubagentStop**: tracks SubAgent lifecycle and transcript paths.
+
+### OpenTelemetry Pipeline
+
+![OpenTelemetry Signals](blog/img-otel.png)
+
+- **Metrics**: token counts, session counts, tool decisions → Prometheus.
+- **Traces**: Orchestrator → SubAgent → Tool → LLM spans → Jaeger.
+- **Log events**: structured prompts, API requests, tool results → Grafana.
+
+### Frontend Workbench
+
+![Frontend Homepage](blog/img-frontend-homepage.jpg)
 
 ## Quick Start
 

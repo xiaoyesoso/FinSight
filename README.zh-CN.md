@@ -33,6 +33,8 @@
 
 ## 架构
 
+![架构总览](blog/img-architecture.png)
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Browser (分析师)                       │
@@ -57,6 +59,34 @@
 │   └──────────────────────────────────────────────────┘   │
 └──────────────────────────────────────────────────────────┘
 ```
+
+### 会话模式
+
+![会话模式](blog/img-sessions.png)
+
+- **Fresh（新会话）**：生成新的 `session_id`，注册 SubAgent、MCP、Hooks 和 OTel 环境变量。
+- **Resume（续问）**：在原会话上继续追问，SDK 恢复完整上下文。
+- **Fork（分叉）**：克隆当前会话为独立分支（新 `session_id`），原会话不受影响。
+
+### 治理与审计
+
+![治理 Hook 流程](blog/img-hooks.png)
+
+- **PreToolUse**：权限守卫，自动放行只读工具，拦截危险写操作和 Bash 命令。
+- **PostToolUse**：每次工具调用后追加 JSONL 审计日志。
+- **SubagentStart / SubagentStop**：追踪子代理生命周期和 transcript 路径。
+
+### OpenTelemetry 可观测
+
+![OpenTelemetry 信号流](blog/img-otel.png)
+
+- **Metrics**：token 数、会话数、工具决策 → Prometheus。
+- **Traces**：Agent → SubAgent → Tool → LLM 调用链 → Jaeger。
+- **Log Events**：结构化 prompt、API 请求、工具结果 → Grafana。
+
+### 前端工作台
+
+![前端首页](blog/img-frontend-homepage.jpg)
 
 ## 快速开始
 
