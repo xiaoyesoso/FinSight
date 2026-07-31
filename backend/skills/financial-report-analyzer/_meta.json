@@ -1,0 +1,11 @@
+{
+  "owner": "hj2916",
+  "slug": "financial-report-analyzer",
+  "displayName": "financial-report-analyzer",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774699455875,
+    "commit": "https://github.com/openclaw/skills/commit/b6d2808a782dfefbe2562b0f6fb8ada6afc17091"
+  },
+  "history": []
+}

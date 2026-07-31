@@ -1,0 +1,34 @@
+# Trae IDE & OpenSpec spec-driven artifacts (local only, do not push to GitHub)
+.trae/
+extra_doc/
+openspec/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Backend secrets & uploads
+backend/.env
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
+backend/data/audit_log.jsonl
+backend/data/claude_config/
+
+# Frontend secrets
+frontend/.env
+
+# Temp test scripts
+temp_extract.py
+test_backend_style.py
+test_partial.py
+test_session.py
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store

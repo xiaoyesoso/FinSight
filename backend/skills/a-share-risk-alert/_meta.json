@@ -1,0 +1,11 @@
+{
+  "owner": "yzswk",
+  "slug": "a-share-risk-alert",
+  "displayName": "A Share Risk Alert",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774793121849,
+    "commit": "https://github.com/openclaw/skills/commit/97ce05fef5c0b73131029148628dd11710d837b4"
+  },
+  "history": []
+}
