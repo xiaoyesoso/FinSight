@@ -103,6 +103,12 @@ def validate_settings() -> Settings:
     upload_dir = os.path.join(os.path.dirname(__file__), "data", "uploads")
     os.makedirs(upload_dir, exist_ok=True)
 
+    # CLI config dir inside the project so the Trae IDE sandbox doesn't block
+    # session file reads/writes (which happens when using ~/.claude/).
+    claude_config_dir = os.path.join(os.path.dirname(__file__), "data", "claude_config")
+    os.makedirs(claude_config_dir, exist_ok=True)
+    os.environ["CLAUDE_CONFIG_DIR"] = claude_config_dir
+
     settings = Settings(
         anthropic_base_url=required["ANTHROPIC_BASE_URL"],  # type: ignore[arg-type]
         anthropic_model=required["ANTHROPIC_MODEL"],  # type: ignore[arg-type]

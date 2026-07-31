@@ -1,7 +1,7 @@
 // Composer: prompt input, PDF upload, SubAgent checkboxes, submit button.
 // Calls POST /api/research (and /api/upload when a PDF is attached).
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { startResearch, uploadPdf } from '../api/client';
 import Disclaimer from './Disclaimer';
 import LangToggle from './LangToggle';
@@ -25,6 +25,7 @@ export default function Composer({ onRun }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const agentLabels: Record<string, string> = {
     'financial-analyzer': t('financialAnalyzer'),
@@ -78,12 +79,24 @@ export default function Composer({ onRun }: Props) {
       <div className="flex items-center gap-3">
         <label className="text-sm text-gray-600">{t('pdfLabel')}</label>
         <input
+          ref={fileInputRef}
           type="file"
           accept=".pdf"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="text-sm"
+          className="hidden"
         />
-        {file && <span className="text-xs text-gray-500">{file.name}</span>}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 text-gray-700"
+        >
+          {file ? t('changePdf') : t('choosePdf')}
+        </button>
+        {file ? (
+          <span className="text-xs text-gray-500">{file.name}</span>
+        ) : (
+          <span className="text-xs text-gray-400">{t('noPdf')}</span>
+        )}
       </div>
 
       <div className="flex items-center gap-4">

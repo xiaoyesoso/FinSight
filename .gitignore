@@ -30,6 +30,10 @@ test_session.py
 frontend/node_modules/
 frontend/dist/
 
+# Blog tooling artifacts
+blog/node_modules/
+blog/package.json
+blog/package-lock.json
+
 # OS
 .DS_Store
-blog/node_modules/

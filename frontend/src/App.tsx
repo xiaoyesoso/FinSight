@@ -10,15 +10,16 @@ import SummaryView from './components/SummaryView';
 import SessionBar from './components/SessionBar';
 import Disclaimer from './components/Disclaimer';
 import LangToggle from './components/LangToggle';
-import { useSSEStream } from './hooks/useSSEStream';
+import { useSSEStream, loadRunId, loadRunMode, saveRunInfo, clearRunStorage } from './hooks/useSSEStream';
 import { resumeResearch, forkResearch, type SessionMode } from './api/client';
 import { useI18n } from './i18n/I18nContext';
 import type { TranslationKey } from './i18n/translations';
 
 export default function App() {
   const { t } = useI18n();
-  const [runId, setRunId] = useState<string | null>(null);
-  const [runMode, setRunMode] = useState<SessionMode>('fresh');
+  // Restore runId / runMode from sessionStorage so a page refresh keeps results.
+  const [runId, setRunId] = useState<string | null>(() => loadRunId());
+  const [runMode, setRunMode] = useState<SessionMode>(() => loadRunMode() ?? 'fresh');
   const { state, reset } = useSSEStream(runId);
 
   const panelTitles: Record<string, TranslationKey> = {
@@ -30,11 +31,13 @@ export default function App() {
   const handleRun = (id: string) => {
     setRunMode('fresh');
     setRunId(id);
+    saveRunInfo(id, 'fresh');
   };
 
   const handleBack = () => {
     reset();
     setRunId(null);
+    clearRunStorage();
   };
 
   const handleResume = async (prompt: string) => {
@@ -44,6 +47,7 @@ export default function App() {
       setRunMode('resume');
       reset();
       setRunId(res.run_id);
+      saveRunInfo(res.run_id, 'resume');
     } catch (e) {
       console.error('resume failed', e);
     }
@@ -56,6 +60,7 @@ export default function App() {
       setRunMode('fork');
       reset();
       setRunId(res.run_id);
+      saveRunInfo(res.run_id, 'fork');
     } catch (e) {
       console.error('fork failed', e);
     }

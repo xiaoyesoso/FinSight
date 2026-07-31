@@ -14,6 +14,31 @@ interface Props {
   onRetry?: () => void;
 }
 
+// Strip CLI-internal metadata from displayed text (both partial and result).
+const CLI_METADATA_RES = [
+  /Async agent launched successfully\./g,
+  /\(This tool result is internal metadata.*?into a user-facing reply\.\)/gs,
+  /agentId: [0-9a-f]+ \(internal ID.*?to continue this agent\.\)/gs,
+  /agentId: [0-9a-f]+ \(use SendMessage.*?\)/gs,
+  /The agent is working in the background\..*?(?:completion notification|when it completes)\./gs,
+  /Do not duplicate this agent's work.*?it is using\./gs,
+  /output_file: \S+\.output/g,
+  /Do NOT Read or tail this file.*?overflow your context\./gs,
+  /If the user asks for progress.*?completion notification\./gs,
+  /You know nothing about its results.*?in the meantime\./gs,
+  /<usage>.*?<\/usage>/gs,
+];
+
+function cleanCliMetadata(text: string): string {
+  let cleaned = text;
+  for (const re of CLI_METADATA_RES) {
+    cleaned = cleaned.replace(re, '');
+  }
+  // Collapse multiple spaces/newlines left by stripping.
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').replace(/[ \t]{2,}/g, ' ').trim();
+  return cleaned;
+}
+
 // Extract a short summary from the tool input for quick display.
 function summarizeToolInput(tool: string, input: Record<string, unknown>): string {
   if (tool === 'Read' || tool === 'Glob' || tool === 'Grep') {
@@ -32,12 +57,10 @@ function summarizeToolInput(tool: string, input: Record<string, unknown>): strin
   if (tool === 'Agent') {
     return String(input.prompt || input.description || '').slice(0, 80);
   }
-  // Generic fallback: show first string value.
   const vals = Object.values(input).filter((v) => typeof v === 'string');
   return vals.length > 0 ? vals[0].slice(0, 80) : '';
 }
 
-// Tool icon map for visual distinction.
 const TOOL_ICONS: Record<string, string> = {
   Read: '📄', Glob: '🔍', Grep: '🔎', Bash: '⚙️',
   Write: '✏️', Edit: '📝', Agent: '🤖',
@@ -83,8 +106,11 @@ export default function SubAgentPanel({ title, state, onRetry }: Props) {
   };
   const m = statusMap[state.status];
 
-  // Show all or just the latest 8 tool calls.
   const visibleTools = showAllTools ? state.toolCalls : state.toolCalls.slice(-8);
+
+  // Clean CLI metadata from both result and partial text.
+  const cleanResult = state.result ? cleanCliMetadata(state.result) : '';
+  const cleanPartial = state.partial ? cleanCliMetadata(state.partial) : '';
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-col">
@@ -98,7 +124,6 @@ export default function SubAgentPanel({ title, state, onRetry }: Props) {
         </div>
       </div>
 
-      {/* Tool call timeline */}
       {state.toolCalls.length > 0 && (
         <div className="mb-2 space-y-0.5">
           {visibleTools.map((entry, i) => (
@@ -121,18 +146,18 @@ export default function SubAgentPanel({ title, state, onRetry }: Props) {
         </div>
       )}
 
-      {/* Streamed content: prefer the final result, fall back to partial text */}
       <div className="markdown-body text-sm text-gray-700 flex-1 overflow-y-auto max-h-96">
-        {state.result ? (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{state.result}</ReactMarkdown>
-        ) : state.partial ? (
-          <pre className="text-xs whitespace-pre-wrap text-gray-500">{state.partial}</pre>
+        {cleanResult ? (
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanResult}</ReactMarkdown>
+        ) : cleanPartial ? (
+          <pre className="text-xs whitespace-pre-wrap text-gray-500">{cleanPartial}</pre>
+        ) : state.status === 'done' ? (
+          <p className="text-gray-400 text-xs italic">SubAgent completed.</p>
         ) : (
           <p className="text-gray-400 text-xs">{t('waitingOutput')}</p>
         )}
       </div>
 
-      {/* Error + retry */}
       {state.status === 'error' && (
         <div className="mt-2">
           <p className="text-red-600 text-xs">{state.error || t('execError')}</p>

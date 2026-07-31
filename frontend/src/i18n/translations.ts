@@ -13,6 +13,9 @@ export const translations = {
     // Composer
     promptPlaceholder: '例如：请对燕京啤酒进行全面投研分析，包括财报、行业热点和风险评估。',
     pdfLabel: '财报 PDF（可选）：',
+    choosePdf: '选择文件',
+    changePdf: '重新选择',
+    noPdf: '未选择任何文件',
     subAgentsLabel: '子代理：',
     submit: '开始研究',
     submitting: '提交中...',
@@ -67,6 +70,9 @@ export const translations = {
 
     promptPlaceholder: 'e.g. Conduct a comprehensive investment research on Yanjing Beer, covering financials, industry trends, and risk assessment.',
     pdfLabel: 'Financial PDF (optional):',
+    choosePdf: 'Choose File',
+    changePdf: 'Change File',
+    noPdf: 'No file chosen',
     subAgentsLabel: 'SubAgents:',
     submit: 'Start Research',
     submitting: 'Submitting...',

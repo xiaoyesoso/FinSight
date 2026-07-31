@@ -20,6 +20,7 @@ resume / fork actions on the active thread.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import uuid
 from collections.abc import AsyncIterator
@@ -125,6 +126,14 @@ def _build_options(
     are injected into the shared ``common`` dict so all three session modes
     carry the same observability configuration and guardrails.
     """
+    # Merge OTel env with CLAUDE_CONFIG_DIR so the CLI subprocess uses the
+    # project-local config dir (bypasses Trae sandbox restrictions on ~/.claude/).
+    cli_env = build_otel_env(enduser_id=enduser_id, tenant_id=tenant_id)
+    cli_env["CLAUDE_CONFIG_DIR"] = os.environ.get(
+        "CLAUDE_CONFIG_DIR",
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "claude_config"),
+    )
+
     common = {
         "include_partial_messages": True,
         "allowed_tools": ORCHESTRATOR_TOOLS,
@@ -137,10 +146,9 @@ def _build_options(
         # SubagentStart/Stop lifecycle logging, Stop archival. Shared by all
         # session modes so fresh/resume/fork runs are governed identically.
         "hooks": build_hooks(),
-        # OpenTelemetry env: traces/metrics/log-events exported via OTLP when
-        # OTEL_EXPORTER_OTLP_ENDPOINT is configured; empty dict when unset.
-        # Orthogonal to session mode, like governance hooks.
-        "env": build_otel_env(enduser_id=enduser_id, tenant_id=tenant_id),
+        # CLI subprocess env: OTel + CLAUDE_CONFIG_DIR for session persistence
+        # within the project directory.
+        "env": cli_env,
     }
 
     if mode == "fresh":
@@ -152,10 +160,12 @@ def _build_options(
         )
 
     if mode == "resume":
-        # The reference passes only resume + allowed_tools; the SDK rehydrates
-        # the rest from the stored session file.
+        # Pass agents + MCP explicitly: the SDK does not reliably rehydrate
+        # SubAgent definitions from stored sessions, so we re-supply them.
         return ClaudeAgentOptions(
             resume=session_id,
+            mcp_servers={"websearch": websearch_server},
+            agents=agents_config,
             **common,
         )
 
@@ -164,6 +174,8 @@ def _build_options(
         resume=session_id,
         fork_session=True,  # clone the session into an isolated branch
         max_turns=max_turns or DEFAULT_FORK_MAX_TURNS,
+        mcp_servers={"websearch": websearch_server},
+        agents=agents_config,
         **common,
     )
 
@@ -322,10 +334,11 @@ async def _translate(
                 and agent not in ctx.completed_agents
             ):
                 ctx.completed_agents.add(agent)
+                cleaned = _clean_subagent_report(text)
                 yield {
                     "type": "subagent_result",
                     "agent": agent,
-                    "data": {"markdown": text, "disclaimer": DISCLAIMER},
+                    "data": {"markdown": cleaned, "disclaimer": DISCLAIMER},
                 }
 
         elif isinstance(block, ToolUseBlock):
@@ -374,20 +387,52 @@ def _extract_tool_result_text(content: Any) -> str:
     return ""
 
 
-# CLI-internal metadata appended to Agent tool results, e.g.
-#   "\nagentId: a8f3... (use SendMessage with to: 'a8f3...', ...)"
-#   "\n<usage>subagent_tokens: 3654\ntool_uses: 0\nduration_ms: 5793</usage>"
-# These are control-protocol noise for the CLI's own agent-to-agent messaging,
-# not analyst-facing content, so strip them before emitting subagent_result.
+# CLI-internal metadata appended to Agent tool results. These are control-
+# protocol noise for the CLI's own agent-to-agent messaging, not analyst-
+# facing content, so strip them before emitting subagent_result.
 _AGENT_ID_TRAILER_RE = re.compile(r"\n?agentId: [0-9a-f]+ \(use SendMessage.*?\)\s*", re.DOTALL)
 _USAGE_TRAILER_RE = re.compile(r"\n?<usage>.*?</usage>\s*", re.DOTALL)
+
+# Known CLI metadata phrases (removed individually since they may appear
+# inline without newlines separating them from real content).
+_CLI_METADATA_PATTERNS = [
+    # Async dispatch notice
+    re.compile(r"Async agent launched successfully\.", re.DOTALL),
+    # Internal metadata disclaimer
+    re.compile(r"\(This tool result is internal metadata.*?into a user-facing reply\.\)", re.DOTALL),
+    # Extended agentId line with internal ID
+    re.compile(r"agentId: [0-9a-f]+ \(internal ID.*?to continue this agent\.\)", re.DOTALL),
+    # Simple agentId trailer
+    re.compile(r"agentId: [0-9a-f]+ \(use SendMessage.*?\)", re.DOTALL),
+    # Background working notice (multiple phrasings across SDK versions).
+    re.compile(r"The agent is working in the background\..*?(?:completion notification|when it completes)\.", re.DOTALL),
+    # Do not duplicate instruction
+    re.compile(r"Do not duplicate this agent's work.*?it is using\.", re.DOTALL),
+    # Output file path
+    re.compile(r"output_file: \S+\.output", re.DOTALL),
+    # Do NOT Read instruction
+    re.compile(r"Do NOT Read or tail this file.*?overflow your context\.", re.DOTALL),
+    # "If the user asks for progress" instruction
+    re.compile(r"If the user asks for progress.*?completion notification\.", re.DOTALL),
+    # You know nothing instruction
+    re.compile(r"You know nothing about its results.*?in the meantime\.", re.DOTALL),
+]
 
 
 def _clean_subagent_report(text: str) -> str:
     """Strip CLI agent-protocol trailers from a SubAgent's final report."""
+    for pattern in _CLI_METADATA_PATTERNS:
+        text = pattern.sub("", text)
     text = _AGENT_ID_TRAILER_RE.sub("\n", text)
     text = _USAGE_TRAILER_RE.sub("\n", text)
-    return text.strip()
+    # Collapse multiple blank lines / spaces left by stripping.
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    # Clean up leading/trailing whitespace and orphaned punctuation.
+    text = text.strip()
+    # If nothing meaningful remains, return a placeholder.
+    if len(text) < 10:
+        return ""
+    return text
 
 
 def _extract_agent_name(tool_input: dict[str, Any]) -> str:

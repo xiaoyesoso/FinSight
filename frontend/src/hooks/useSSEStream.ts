@@ -73,8 +73,61 @@ const INITIAL_STATE: StreamState = {
   done: false,
 };
 
+// sessionStorage keys for persisting run state across page refreshes.
+const STATE_KEY_PREFIX = 'finsight:state:';
+const RUN_KEY = 'finsight:runId';
+const MODE_KEY = 'finsight:runMode';
+
+function loadSavedState(runId: string): StreamState | null {
+  try {
+    const raw = sessionStorage.getItem(STATE_KEY_PREFIX + runId);
+    if (!raw) return null;
+    return JSON.parse(raw) as StreamState;
+  } catch {
+    return null;
+  }
+}
+
+function saveState(runId: string, state: StreamState) {
+  try {
+    sessionStorage.setItem(STATE_KEY_PREFIX + runId, JSON.stringify(state));
+  } catch {
+    // sessionStorage may be full; silently ignore.
+  }
+}
+
+export function clearRunStorage() {
+  const runId = sessionStorage.getItem(RUN_KEY);
+  if (runId) sessionStorage.removeItem(STATE_KEY_PREFIX + runId);
+  sessionStorage.removeItem(RUN_KEY);
+  sessionStorage.removeItem(MODE_KEY);
+}
+
+export function loadRunId(): string | null {
+  return sessionStorage.getItem(RUN_KEY);
+}
+
+export function loadRunMode(): SessionMode | null {
+  return sessionStorage.getItem(MODE_KEY) as SessionMode | null;
+}
+
+export function saveRunInfo(runId: string, mode: SessionMode) {
+  sessionStorage.setItem(RUN_KEY, runId);
+  sessionStorage.setItem(MODE_KEY, mode);
+}
+
+// Import type here to avoid circular dependency with client.ts.
+type SessionMode = 'fresh' | 'resume' | 'fork';
+
 export function useSSEStream(runId: string | null) {
-  const [state, setState] = useState<StreamState>(INITIAL_STATE);
+  // Restore from sessionStorage on first mount so a page refresh keeps results.
+  const [state, setState] = useState<StreamState>(() => {
+    if (runId) {
+      const saved = loadSavedState(runId);
+      if (saved) return saved;
+    }
+    return INITIAL_STATE;
+  });
   const sourceRef = useRef<EventSource | null>(null);
 
   const close = useCallback(() => {
@@ -84,7 +137,6 @@ export function useSSEStream(runId: string | null) {
 
   const reset = useCallback(() => {
     close();
-    // Deep-clone the initial agent state so we don't mutate the constant.
     setState({
       agents: JSON.parse(JSON.stringify(INITIAL_AGENTS)),
       finalReport: '',
@@ -97,15 +149,22 @@ export function useSSEStream(runId: string | null) {
 
   useEffect(() => {
     if (!runId) return;
-    // Reset state for a fresh run.
-    setState({
-      agents: JSON.parse(JSON.stringify(INITIAL_AGENTS)),
-      finalReport: '',
-      finalDisclaimer: '',
-      sessionId: null,
-      parentSessionId: null,
-      done: false,
-    });
+
+    // Try restoring saved state; only reset if no saved state exists.
+    const saved = loadSavedState(runId);
+    if (!saved) {
+      setState({
+        agents: JSON.parse(JSON.stringify(INITIAL_AGENTS)),
+        finalReport: '',
+        finalDisclaimer: '',
+        sessionId: null,
+        parentSessionId: null,
+        done: false,
+      });
+    }
+
+    // If the run already completed, don't reconnect SSE (stream is gone).
+    if (saved?.done) return;
 
     const source = streamResearch(runId);
     sourceRef.current = source;
@@ -122,14 +181,37 @@ export function useSSEStream(runId: string | null) {
 
     eventTypes.forEach((eventName) => {
       source.addEventListener(eventName, (e) => {
+        // The `done` event may carry no data payload; handle gracefully.
+        const raw = (e as MessageEvent).data;
+        if (!raw) {
+          if (eventName === 'done') setState((prev) => {
+            const next = { ...prev, done: true };
+            saveState(runId, next);
+            return next;
+          });
+          return;
+        }
         // The backend payload already includes `type`, `agent` and `data`.
-        const payload = JSON.parse((e as MessageEvent).data) as SSEEvent;
-        setState((prev) => reduceEvent(prev, payload));
+        const payload = JSON.parse(raw) as SSEEvent;
+        setState((prev) => {
+          const next = reduceEvent(prev, payload);
+          saveState(runId, next);
+          return next;
+        });
       });
     });
 
     source.onerror = () => {
-      setState((prev) => ({ ...prev, error: 'stream connection lost', done: true }));
+      setState((prev) => {
+        // If we already have results (from sessionStorage restore), keep them
+        // instead of showing "stream connection lost".
+        if (prev.done || prev.finalReport || Object.values(prev.agents).some(a => a.result)) {
+          return { ...prev, done: true };
+        }
+        return { ...prev, error: 'stream connection lost', done: true };
+      });
+      // Save the final state so a subsequent refresh still shows results.
+      setState((prev) => { saveState(runId, prev); return prev; });
     };
 
     return () => source.close();
