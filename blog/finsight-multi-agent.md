@@ -285,6 +285,8 @@ done                -> 流结束，关闭连接
 
 前端用 `EventSource` 消费这些事件，三个 SubAgent 面板实时展示状态和内容。我还加了 `sessionStorage` 持久化，页面刷新后不会丢结果，以及中英文切换。
 
+![FinSight 首页界面](img-frontend-homepage.jpg)
+
 有一个细节花了些时间处理。CLI 子进程返回的 Agent 工具结果里会附带大量协议元数据，比如 `agentId: a78cf5ef4ead7f68e (internal ID - do not mention to user. Use SendMessage with to: 'a78cf5ef4ead7f68e'...)`。这些是 CLI 内部的代理间通信指令，不应该展示给用户。我在后端写了 `_clean_subagent_report()` 函数用十几个正则把这些噪声剥掉，前端也做了一层兜底清理。
 
 ## 回到最初
