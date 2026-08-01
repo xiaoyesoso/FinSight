@@ -573,9 +573,6 @@ def _clean_subagent_report(text: str) -> str:
 
 谢谢你看我的文章，我们，下次再见。
 
-> / 作者：卡兹克
-> / 投稿或爆料，请联系邮箱：wzglyay@virxact.com
-
 ---
 
 ## 参考与延伸阅读
