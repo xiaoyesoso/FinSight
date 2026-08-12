@@ -1,296 +1,257 @@
-# FinSight · Full-Stack Intelligent Investment Research Platform
+# FinSight · 全链路智能投研平台
 
-> A multi-agent orchestration platform for investment research with full-stack
-> observability. A main orchestrator agent dispatches three SubAgents - financial
-> report analysis, industry news collection, and A-share risk alert - that run in
-> parallel and stream results live to a React frontend.
+> Full-Stack Intelligent Investment Research Platform - 基于多代理编排的投研平台。
+> 主 Agent 统筹调度财报分析、行业新闻、风险预警三个 SubAgent,并行执行,实时流式输出。
 
-⚠️ **Disclaimer: This tool is for learning and research purposes only and does
-not constitute investment advice. The stock market carries risks; invest with
-caution.**
+⚠️ **免责声明：本工具仅供学习和研究使用，不构成投资建议。股市有风险，投资需谨慎。**
 
-[中文文档](README.zh-CN.md)
+[English](README.en.md)
 
 ---
 
-## Features
+## 功能特性
 
-- **Multi-agent orchestration**: the main agent dispatches three SubAgents via
-  the `Agent` tool, achieving context isolation and parallel execution.
-- **Financial report analysis**: parses PDF reports, computes profitability /
-  growth / solvency / efficiency metrics, and renders visualization charts.
-- **Industry news insights**: multi-dimensional web search (5 dimensions, ≥8
-  queries), deduplication, and heat-ranking.
-- **Risk assessment**: A-share ST / delisting / financial-fraud scanning across
-  10 risk signals with a graded risk report.
-- **Session resume & fork**: continue a finished research thread with full
-  context (resume), or clone it into an isolated branch to explore alternative
-  investment logic (fork) - SDK sessions persist on local disk.
-- **Live streaming**: SSE pushes SubAgent dispatch, partial messages, tool calls,
-  and final results to the browser.
-- **Web workbench**: React frontend with three parallel panels + an aggregated
-  research report.
-- **Governance & audit**: PreToolUse permission guardrail (auto-allow read-only
-  tools, block dangerous operations), PostToolUse JSONL audit trail, SubAgent
-  lifecycle tracking.
-- **Full-stack observability**: OpenTelemetry integration exporting
-  Traces/Metrics/Log events to Jaeger/Grafana with per-user/tenant cost
-  attribution.
+- **多代理编排**：主 Agent 通过 `Agent` 工具调度三个 SubAgent，实现上下文隔离与并行执行
+- **财报深度分析**：解析 PDF 财报，计算盈利/成长/偿债/运营四大类指标，生成可视化图表
+- **行业热点洞察**：多维度网络搜索（5 维度 ≥8 次检索），去重合并，热度排序
+- **风险全面评估**：A 股 ST 预警、退市风险、财务造假排查，10 大风险信号扫描
+- **会话续问与分叉**：研究完成后可在原会话上继续追问（完整保留上下文），或将会话克隆为独立分支探索不同投资逻辑；SDK 会话持久化在本地磁盘
+- **实时流式输出**：SSE 推送 SubAgent 调度、部分消息、工具调用、最终结果
+- **Web 工作台**：React 前端，三面板并行展示 + 聚合研报
+- **治理与审计**：PreToolUse 权限守卫（只读工具自动放行、危险操作拦截）、PostToolUse JSONL 审计日志、SubAgent 生命周期追踪
+- **全链路可观测**：OpenTelemetry 集成，Traces/Metrics/Log events 导出至 Jaeger/Grafana，支持按用户/租户成本归因
 
-## Tech Stack
+## 技术栈
 
-| Layer | Technology |
-|-------|------------|
-| Backend | Python 3.11+ · FastAPI · Uvicorn · Claude Agent SDK |
-| Frontend | React + TypeScript · Vite · TailwindCSS |
-| Model | Any Anthropic-compatible endpoint (MiniMax, Volcengine ARK, ...) |
-| Search | Bocha AI (MCP tool `mcp__websearch__bochasearch`) |
-| Protocol | HTTP + SSE (Server-Sent Events) |
+| 层 | 技术 |
+|---|---|
+| 后端 | Python 3.11+ · FastAPI · Uvicorn · Claude Agent SDK |
+| 前端 | React + TypeScript · Vite · TailwindCSS |
+| 模型 | 任意 Anthropic 兼容端点（MiniMax、火山引擎 ARK 等） |
+| 搜索 | Bocha AI（MCP 工具 `mcp__websearch__bochasearch`） |
+| 协议 | HTTP + SSE（Server-Sent Events） |
 
-## Architecture
+## 架构
 
-![Architecture Overview](blog/img-architecture.png)
+![架构总览](blog/img-architecture.png)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Browser (analyst)                     │
-│   Composer ──▶ SSE Client ──▶ 3 SubAgent panels + summary│
+│                    Browser (分析师)                       │
+│   Composer ──▶ SSE Client ──▶ 3 SubAgent 面板 + 汇总     │
 └────────────────────────┬────────────────────────────────┘
             HTTPS / SSE   │
 ┌─────────────────────────┴────────────────────────────────┐
 │              Backend (FastAPI · Python)                   │
 │                                                          │
-│   POST /api/upload    ──▶  PDF storage ──▶ file_id       │
-│   POST /api/research  ──▶  create run  ──▶ run_id         │
-│   GET  /api/research/{id}/stream ──▶ SSE event stream     │
+│   POST /api/upload    ──▶  PDF 存储 ──▶ file_id          │
+│   POST /api/research  ──▶  创建 run ──▶ run_id            │
+│   GET  /api/research/{id}/stream ──▶ SSE 事件流           │
 │                                                          │
 │   ┌──────────────────────────────────────────────────┐   │
 │   │        Orchestrator (ClaudeSDKClient)             │   │
 │   │   agents = {                                      │   │
-│   │     financial-analyzer       (financial Skill)    │   │
-│   │     industry_news_collector  (industry Skill)     │   │
-│   │     a-share-risk-alert       (risk Skill)         │   │
+│   │     financial-analyzer       (财报 Skill)         │   │
+│   │     industry_news_collector  (行业 Skill)         │   │
+│   │     a-share-risk-alert       (风险 Skill)         │   │
 │   │   }                                              │   │
 │   │   mcp_servers = { websearch: Bocha }             │   │
 │   └──────────────────────────────────────────────────┘   │
 └──────────────────────────────────────────────────────────┘
 ```
 
-### Session Modes
+### 会话模式
 
-![Session Modes](blog/img-sessions.png)
+![会话模式](blog/img-sessions.png)
 
-- **Fresh**: a new `session_id` is generated; agents, MCP servers, hooks, and telemetry env are registered.
-- **Resume**: continue in the same session with full context rehydration.
-- **Fork**: clone the session into an isolated branch with a new `session_id`; the original stays untouched.
+- **Fresh（新会话）**：生成新的 `session_id`，注册 SubAgent、MCP、Hooks 和 OTel 环境变量。
+- **Resume（续问）**：在原会话上继续追问，SDK 恢复完整上下文。
+- **Fork（分叉）**：克隆当前会话为独立分支（新 `session_id`），原会话不受影响。
 
-### Governance Hooks
+### 治理与审计
 
-![Governance Hooks](blog/img-hooks.png)
+![治理 Hook 流程](blog/img-hooks.png)
 
-- **PreToolUse**: permission guardrail that auto-allows read-only tools and denies dangerous writes/commands.
-- **PostToolUse**: appends a JSONL audit record per tool call.
-- **SubagentStart / SubagentStop**: tracks SubAgent lifecycle and transcript paths.
+- **PreToolUse**：权限守卫，自动放行只读工具，拦截危险写操作和 Bash 命令。
+- **PostToolUse**：每次工具调用后追加 JSONL 审计日志。
+- **SubagentStart / SubagentStop**：追踪子代理生命周期和 transcript 路径。
 
-### OpenTelemetry Pipeline
+### OpenTelemetry 可观测
 
-![OpenTelemetry Signals](blog/img-otel.png)
+![OpenTelemetry 信号流](blog/img-otel.png)
 
-- **Metrics**: token counts, session counts, tool decisions → Prometheus.
-- **Traces**: Orchestrator → SubAgent → Tool → LLM spans → Jaeger.
-- **Log events**: structured prompts, API requests, tool results → Grafana.
+- **Metrics**：token 数、会话数、工具决策 → Prometheus。
+- **Traces**：Agent → SubAgent → Tool → LLM 调用链 → Jaeger。
+- **Log Events**：结构化 prompt、API 请求、工具结果 → Grafana。
 
-### Cost Attribution
+### 成本归因
 
-![Cost Attribution Formula](blog/img-cost-formula.png)
+![成本归因公式](blog/img-cost-formula.png)
 
-- Per-request cost: `C = (Ni × Pi + No × Po + Nc × Pc) / 1,000,000`.
-- Multi-agent total cost is the sum of orchestrator + all SubAgent calls.
-- `enduser.id` / `tenant.id` resource attributes enable per-analyst and per-team rollups in Grafana.
+- 单次调用成本：`C = (Ni × Pi + No × Po + Nc × Pc) / 1,000,000`。
+- 多代理总成本为主代理与所有子代理各自 C 值之和。
+- `enduser.id` / `tenant.id` 资源属性支持在 Grafana 中按分析师和按团队汇总成本。
 
-### Frontend Workbench
+### 前端工作台
 
-![Frontend Homepage](blog/img-frontend-homepage.jpg)
+![前端首页](blog/img-frontend-homepage.jpg)
 
-## Quick Start
+## 快速开始
 
-### 1. Prerequisites
+### 1. 环境准备
 
-- Python 3.11+ (conda base environment recommended; already includes
-  `claude_agent_sdk`)
+- Python 3.11+（推荐 conda base 环境，已含 `claude_agent_sdk`）
 - Node.js 18+ / npm
 
-### 2. Configure the backend
+### 2. 配置后端
 
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env and fill in real API keys:
-#   ANTHROPIC_API_KEY  - API key for your Anthropic-compatible endpoint
-#                        (legacy alias MINIMAX_API_KEY also accepted)
-#   BOCHA_API_KEY      - Bocha AI search key (optional; news/risk SubAgents need it)
+# 编辑 .env，填入真实的 API Key：
+#   ANTHROPIC_API_KEY  - Anthropic 兼容端点的 API 密钥
+#                        （兼容旧名 MINIMAX_API_KEY）
+#   BOCHA_API_KEY      - Bocha AI 搜索密钥（可选；行业/风险 SubAgent 需要）
 ```
 
-### 3. Run the backend
+### 3. 启动后端
 
 ```bash
-# Run from the project root
+# 在项目根目录执行
 pip install -r backend/requirements.txt
 uvicorn backend.main:app --reload --port 8000
 ```
 
-Verify: open http://localhost:8000/health - should return
-`{"status":"ok","model":"<your-model>"}`
+验证：访问 http://localhost:8000/health 返回 `{"status":"ok","model":"<你的模型>"}`
 
-### 4. Run the frontend
+### 4. 启动前端
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env   # set VITE_API_BASE_URL=http://localhost:8000
+cp .env.example .env   # 设置 VITE_API_BASE_URL=http://localhost:8000
 npm run dev
 ```
 
-Open http://localhost:5173.
+访问 http://localhost:5173 即可使用。
 
-> **Note**: `VITE_API_BASE_URL` makes the browser call the backend directly.
-> Without it, SSE streams go through the Vite dev proxy, which buffers
-> `text/event-stream` responses and breaks live updates.
+> **注意**：`VITE_API_BASE_URL` 让浏览器直连后端。若不设置，SSE 流会经过
+> Vite 开发代理，代理会缓冲 `text/event-stream` 响应，导致实时流式更新失效。
 
-## Usage
+## 使用方法
 
-1. Enter a research prompt in the Composer (e.g. "Analyze Yanjing Beer").
-2. Optional: upload a financial report PDF.
-3. Select which SubAgents to dispatch (financial / industry / risk).
-4. Click "开始研究" - three panels stream each SubAgent's output in real time.
-5. View the aggregated report at the top once all SubAgents finish.
-6. Once a run completes, the SessionBar shows the session ID and offers:
-   - **继续追问 (resume)**: ask a follow-up in the same session - the agents
-     keep full context (PDF path, prior findings, SubAgent routing).
-   - **分叉探索 (fork)**: clone the session into an isolated branch (new
-     session ID, optional turn cap) to test an alternative investment logic
-     without touching the original thread.
+1. 在 Composer 中输入研究提示词（如"请对燕京啤酒进行全面投研分析"）
+2. 可选：上传财报 PDF 文件
+3. 勾选要调度的 SubAgent（财报 / 行业 / 风险）
+4. 点击"开始研究"，三个面板将实时流式展示各 SubAgent 的输出
+5. 最终在顶部查看聚合研报
+6. 研究完成后，会话栏（SessionBar）显示会话 ID，并提供两个操作：
+   - **继续追问（resume）**：在同一会话中追问，Agent 保留完整上下文（PDF 路径、已有结论、SubAgent 路由）
+   - **分叉探索（fork）**：将会话克隆为独立分支（新会话 ID，可选最大轮次），在不影响原会话的情况下探索不同投资逻辑
 
-## API Reference
+## API 接口
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/api/upload` | Upload a PDF report, returns `file_id` |
-| `POST` | `/api/research` | Submit a research task, returns `run_id`. Body: `prompt` (required), `file_id`, `agents`, `session_id`, `mode` (`fresh`/`resume`/`fork`, default `fresh`), `max_turns` (fork only, default 5) |
-| `GET` | `/api/research/{run_id}/stream` | SSE stream of research progress |
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/health` | 健康检查 |
+| `POST` | `/api/upload` | 上传 PDF 财报，返回 `file_id` |
+| `POST` | `/api/research` | 提交研究任务，返回 `run_id`。请求体：`prompt`（必填）、`file_id`、`agents`、`session_id`、`mode`（`fresh`/`resume`/`fork`，默认 `fresh`）、`max_turns`（仅 fork，默认 5） |
+| `GET` | `/api/research/{run_id}/stream` | SSE 流式获取研究进度 |
 
-### Examples
+### 请求示例
 
 ```bash
-# Upload a PDF
+# 上传 PDF
 curl -X POST http://localhost:8000/api/upload \
-  -F "file=@report.pdf"
+  -F "file=@燕京啤酒财报.pdf"
 
-# Submit a fresh research task
+# 提交新研究任务
 curl -X POST http://localhost:8000/api/research \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"Analyze Yanjing Beer","file_id":"<id>","agents":["financial-analyzer"]}'
+  -d '{"prompt":"分析燕京啤酒","file_id":"<id>","agents":["financial-analyzer"]}'
 
-# Resume a session (session_id comes from the final_result SSE event)
+# 继续追问（session_id 来自上一轮 final_result SSE 事件）
 curl -X POST http://localhost:8000/api/research \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"Add the latest weekly bearish news","session_id":"<sid>","mode":"resume"}'
+  -d '{"prompt":"请补充最新一周行业利空","session_id":"<sid>","mode":"resume"}'
 
-# Fork a session into an isolated branch
+# 分叉探索（克隆会话为独立分支）
 curl -X POST http://localhost:8000/api/research \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"Redo the valuation with a DCF model","session_id":"<sid>","mode":"fork","max_turns":5}'
+  -d '{"prompt":"基于现有分析，额外用 DCF 模型重做估值","session_id":"<sid>","mode":"fork","max_turns":5}'
 ```
 
-### SSE Event Types
+### SSE 事件类型
 
-| Event | Meaning |
-|-------|---------|
-| `subagent_dispatch` | Orchestrator dispatched a SubAgent |
-| `partial_message` | Streaming partial text |
-| `tool_call` | A tool was invoked |
-| `subagent_result` | SubAgent finished; carries final Markdown |
-| `final_result` | Orchestrator aggregated results; carries the full report plus `session_id` (and `parent_session_id` for forks) |
-| `error` | A run failed |
-| `done` | Stream complete |
+| 事件 | 含义 |
+|---|---|
+| `subagent_dispatch` | 主 Agent 调度了某个 SubAgent |
+| `partial_message` | 流式部分消息 |
+| `tool_call` | 工具调用 |
+| `subagent_result` | SubAgent 完成，携带最终 Markdown |
+| `final_result` | 主 Agent 聚合完成，携带综合研报及 `session_id`（fork 时另带 `parent_session_id`） |
+| `error` | 运行出错 |
+| `done` | 流结束 |
 
-## Project Structure
+## 项目结构
 
 ```
 FinSight/
-├── backend/                    # Python backend
-│   ├── config.py               # Env validation (fail-fast)
-│   ├── main.py                 # FastAPI app factory
-│   ├── api/                    # HTTP + SSE layer
+├── backend/                    # Python 后端
+│   ├── config.py               # 环境变量校验（fail-fast）
+│   ├── main.py                 # FastAPI 应用工厂
+│   ├── api/                    # HTTP + SSE 接口层
 │   │   ├── research.py         # POST /api/research + RunManager
 │   │   ├── upload.py           # POST /api/upload
 │   │   └── sse.py              # GET /api/research/{id}/stream
-│   ├── agents/                 # Multi-agent definitions
-│   │   ├── orchestrator.py     # Main agent driver + SSE event translation
-│   │   ├── financial.py        # Financial report SubAgent
-│   │   ├── industry_news.py    # Industry news SubAgent
-│   │   ├── risk_alert.py       # Risk alert SubAgent
-│   │   ├── hooks.py            # Governance hooks (permission guard + audit + lifecycle)
-│   │   ├── telemetry.py        # OpenTelemetry env factory
-│   │   └── registry.py         # agents_config registry
+│   ├── agents/                 # 多代理定义
+│   │   ├── orchestrator.py     # 主 Agent 驱动 + SSE 事件翻译
+│   │   ├── financial.py        # 财报 SubAgent
+│   │   ├── industry_news.py    # 行业新闻 SubAgent
+│   │   ├── risk_alert.py       # 风险预警 SubAgent
+│   │   ├── hooks.py            # 治理 Hooks（权限守卫 + 审计日志 + 生命周期追踪）
+│   │   ├── telemetry.py        # OpenTelemetry 环境变量工厂
+│   │   └── registry.py         # agents_config 注册表
 │   ├── mcp/
-│   │   └── websearch.py        # Bocha AI search MCP tool
-│   ├── skills/                 # Three Skills (reused as-is)
-│   └── data/uploads/           # PDF upload storage
-├── frontend/                   # React + TS frontend
+│   │   └── websearch.py        # Bocha AI 搜索 MCP 工具
+│   ├── skills/                 # 三个 Skill（原样复用）
+│   └── data/uploads/           # PDF 上传存储
+├── frontend/                   # React + TS 前端
 │   └── src/
-│       ├── App.tsx             # Workbench main view
-│       ├── api/client.ts       # HTTP + EventSource client (start/resume/fork helpers)
-│       ├── hooks/useSSEStream.ts  # SSE consumer hook (captures session lineage)
+│       ├── App.tsx             # 工作台主视图
+│       ├── api/client.ts       # HTTP + EventSource 客户端（start/resume/fork 封装）
+│       ├── hooks/useSSEStream.ts  # SSE 消费 Hook（捕获会话 lineage）
 │       └── components/         # Composer / SubAgentPanel / SummaryView / SessionBar / Disclaimer
-├── AGENTS.md                   # AI agent development guide
-├── README.md                   # This file (English)
-└── README.zh-CN.md             # Chinese documentation
+├── AGENTS.md                   # AI 代理开发指南
+├── README.md                   # 本文件（中文）
+└── README.en.md                # 英文文档
 ```
 
-## Environment Variables
+## 环境变量
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ANTHROPIC_BASE_URL` | ✅ | Anthropic-compatible endpoint (MiniMax, Volcengine ARK, ...) |
-| `ANTHROPIC_MODEL` | ✅ | Default model (e.g. `MiniMax-M3`, `doubao-seed-2.1-turbo`) |
-| `ANTHROPIC_API_KEY` | ✅ | API key for the endpoint (legacy alias `MINIMAX_API_KEY` also accepted) |
-| `BOCHA_API_KEY` | | Bocha AI search key. Optional, but news/risk SubAgents' web search fails without it |
-| `FRONTEND_ORIGIN` | | CORS origin (default `http://localhost:5173`) |
-| `VITE_API_BASE_URL` | | Frontend only: backend base URL in dev so SSE bypasses the Vite proxy |
+| 变量 | 必填 | 说明 |
+|---|---|---|
+| `ANTHROPIC_BASE_URL` | ✅ | Anthropic 兼容端点（MiniMax、火山引擎 ARK 等） |
+| `ANTHROPIC_MODEL` | ✅ | 默认模型（如 `MiniMax-M3`、`doubao-seed-2.1-turbo`） |
+| `ANTHROPIC_API_KEY` | ✅ | 端点 API 密钥（兼容旧名 `MINIMAX_API_KEY`） |
+| `BOCHA_API_KEY` | | Bocha AI 搜索密钥。可选，但未配置时行业/风险 SubAgent 的联网搜索会失败 |
+| `FRONTEND_ORIGIN` | | CORS 来源（默认 `http://localhost:5173`） |
+| `VITE_API_BASE_URL` | | 仅前端：开发环境下指向后端地址，使 SSE 绕过 Vite 代理 |
 
-## Core Design
+## 核心设计
 
-- **SubAgent as a tool**: each SubAgent mounts a dedicated Skill; the main agent
-  invokes it via the `Agent` tool. Intermediate steps stay inside the SubAgent,
-  so the orchestrator only receives the refined conclusion - keeping its context
-  clean.
-- **Parallel execution**: the three SubAgents are logically independent and run
-  concurrently.
-- **Session management**: fresh runs get an explicit UUID `session_id` so the
-  SDK persists the conversation to disk; `resume` rehydrates the full context
-  in place, and `fork` clones it into an isolated branch (new session ID, turn
-  cap) for exploring alternative investment logic in parallel.
-- **Headless permissions**: the backend sets `permission_mode="bypassPermissions"`
-  so SubAgent tool calls (Read/Bash/Grep/...) auto-approve - there is no human
-  in the loop to answer interactive approval prompts.
-- **Live event attribution**: a per-run context maps Agent tool calls to
-  SubAgents, extracts each SubAgent's final report from the Agent tool result
-  (stripping CLI protocol trailers), and streams text deltas as
-  `partial_message` events.
-- **Explicit routing**: some domestic models have limited autonomous planning; the
-  frontend supports explicit SubAgent selection and injects a "must use subagent"
-  directive into the prompt.
-- **English comments**: all hand-written code comments are in English (Skills are
-  reused reference assets, left unchanged).
+- **SubAgent 即工具**：每个 SubAgent 挂载一个专属 Skill，主 Agent 通过 `Agent` 工具调度，中间过程隔离在 SubAgent 内部，主 Agent 仅获取精炼结论
+- **并行执行**：三个 SubAgent 逻辑互不依赖，可并发运行
+- **会话管理**：fresh 会话显式生成 UUID 作为 `session_id`，确保 SDK 将会话持久化到本地磁盘；`resume` 在原会话上完整恢复上下文继续追问，`fork` 则会话克隆为独立分支（新会话 ID、轮次上限），用于并行探索不同投资逻辑
+- **无头权限模式**：后端以 `permission_mode="bypassPermissions"` 运行，SubAgent 的工具调用（Read/Bash/Grep 等）自动批准——服务端没有人工响应交互式审批提示
+- **实时事件归属**：每次运行维护独立上下文，将 Agent 工具调用映射到对应 SubAgent，从 Agent 工具返回值中提取 SubAgent 最终报告（剥离 CLI 协议尾巴），并将文本增量以 `partial_message` 事件流式推送
+- **显式路由**：部分国产模型自主规划能力有限，前端支持显式指定 SubAgent，提示词注入"必须使用子agent"指令
+- **英文注释**：所有自写代码注释统一使用英文（Skills 为原样复用的参考资产）
 
-## Development Guide
+## 开发指南
 
-See [AGENTS.md](AGENTS.md) for architecture details, code conventions, common
-commands, and extension guides.
+详见 [AGENTS.md](AGENTS.md) - 包含架构说明、代码规范、常用命令和扩展指南。
 
-## License & Disclaimer
+## 许可与免责
 
-This project is for learning and research purposes only and does not constitute
-any investment advice. The stock market carries risks; invest with caution.
+本项目仅供学习和研究使用，不构成任何投资建议。股市有风险，投资需谨慎。
